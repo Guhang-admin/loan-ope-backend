@@ -2,8 +2,8 @@ package com.example.backend.service;
 
 import com.example.backend.entity.Loan;
 import com.example.backend.entity.RepaymentPlan;
-import com.example.backend.repository.LoanRepository;
-import com.example.backend.repository.RepaymentPlanRepository;
+import com.example.backend.mapper.LoanMapper;
+import com.example.backend.mapper.RepaymentPlanMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -14,17 +14,17 @@ import java.util.List;
 @Service
 public class LoanService {
     @Autowired
-    private LoanRepository loanRepository;
+    private LoanMapper loanMapper;
     @Autowired
-    private RepaymentPlanRepository repaymentPlanRepository;
+    private RepaymentPlanMapper repaymentPlanMapper;
 
     public Loan applyLoan(Loan loan) {
         loan.setLoanDate(new Date());
         loan.setStatus("申请中");
-        Loan savedLoan = loanRepository.save(loan);
+        loanMapper.insertLoan(loan);
         // 生成还款计划
-        generateRepaymentPlan(savedLoan);
-        return savedLoan;
+        generateRepaymentPlan(loan);
+        return loan;
     }
 
     private void generateRepaymentPlan(Loan loan) {
@@ -59,16 +59,28 @@ public class LoanService {
             plan.setTotalAmount(monthlyPayment);
             plan.setStatus("未还款");
             
-            repaymentPlanRepository.save(plan);
+            repaymentPlanMapper.insertRepaymentPlan(plan);
             remainingPrincipal = remainingPrincipal.subtract(principal);
         }
     }
 
     public List<Loan> getAllLoans() {
-        return loanRepository.findAll();
+        return loanMapper.getAllLoans();
     }
 
     public Loan getLoanById(Long id) {
-        return loanRepository.findById(id).orElse(null);
+        return loanMapper.getLoanById(id);
+    }
+
+    public void approveLoan(Long loanId) {
+        loanMapper.updateLoanStatus(loanId, "已批准");
+    }
+
+    public void rejectLoan(Long loanId) {
+        loanMapper.updateLoanStatus(loanId, "已拒绝");
+    }
+
+    public List<Loan> getLoansByUserId(Long userId) {
+        return loanMapper.getLoansByUserId(userId);
     }
 }

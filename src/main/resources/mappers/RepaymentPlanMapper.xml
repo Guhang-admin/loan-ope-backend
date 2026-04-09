@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.backend.mapper.RepaymentPlanMapper">
+    <resultMap id="RepaymentPlanMap" type="com.example.backend.entity.RepaymentPlan">
+        <id column="id" property="id" />
+        <result column="loan_id" property="loanId" />
+        <result column="installment_number" property="installmentNumber" />
+        <result column="due_date" property="dueDate" />
+        <result column="principal" property="principal" />
+        <result column="interest" property="interest" />
+        <result column="total_amount" property="totalAmount" />
+        <result column="status" property="status" />
+    </resultMap>
+
+    <insert id="insertRepaymentPlan" parameterType="com.example.backend.entity.RepaymentPlan" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO repayment_plan (loan_id, installment_number, due_date, principal, interest, total_amount, status)
+        VALUES (#{loanId}, #{installmentNumber}, #{dueDate}, #{principal}, #{interest}, #{totalAmount}, #{status})
+    </insert>
+
+    <select id="getPlansByLoanId" parameterType="Long" resultMap="RepaymentPlanMap">
+        SELECT * FROM repayment_plan WHERE loan_id = #{loanId}
+    </select>
+
+    <update id="updatePlanStatus" parameterType="map">
+        UPDATE repayment_plan SET status = #{status} WHERE id = #{id}
+    </update>
+</mapper>

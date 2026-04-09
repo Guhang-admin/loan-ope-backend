@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.backend.mapper.UserMapper">
+    <resultMap id="UserMap" type="com.example.backend.entity.User">
+        <id column="id" property="id" />
+        <result column="username" property="username" />
+        <result column="password" property="password" />
+        <result column="name" property="name" />
+        <result column="role" property="role" />
+        <result column="credit_score" property="creditScore" />
+    </resultMap>
+
+    <select id="getAllUsers" resultMap="UserMap">
+        SELECT * FROM user
+    </select>
+
+    <select id="getUserById" parameterType="Long" resultMap="UserMap">
+        SELECT * FROM user WHERE id = #{id}
+    </select>
+
+    <select id="getUserByUsername" parameterType="String" resultMap="UserMap">
+        SELECT * FROM user WHERE username = #{username}
+    </select>
+
+    <update id="updateCreditScore" parameterType="map">
+        UPDATE user SET credit_score = #{creditScore} WHERE id = #{id}
+    </update>
+
+    <select id="getTotalUsers" resultType="int">
+        SELECT COUNT(*) FROM user
+    </select>
+</mapper>

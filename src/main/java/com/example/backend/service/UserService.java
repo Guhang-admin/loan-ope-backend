@@ -1,7 +1,7 @@
 package com.example.backend.service;
 
 import com.example.backend.entity.User;
-import com.example.backend.repository.UserRepository;
+import com.example.backend.mapper.UserMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -10,26 +10,26 @@ import java.util.List;
 @Service
 public class UserService {
     @Autowired
-    private UserRepository userRepository;
+    private UserMapper userMapper;
 
     public List<User> getAllUsers() {
-        return userRepository.findAll();
+        return userMapper.getAllUsers();
     }
 
     public User getUserById(Long id) {
-        return userRepository.findById(id).orElse(null);
+        return userMapper.getUserById(id);
     }
 
     public User getUserByUsername(String username) {
-        return userRepository.findByUsername(username);
+        return userMapper.getUserByUsername(username);
     }
 
     public User updateCreditScore(Long userId, Integer creditScore) {
-        User user = userRepository.findById(userId).orElse(null);
-        if (user != null) {
-            user.setCreditScore(creditScore);
-            return userRepository.save(user);
-        }
-        return null;
+        userMapper.updateCreditScore(userId, creditScore);
+        return userMapper.getUserById(userId);
+    }
+
+    public int getTotalUsers() {
+        return userMapper.getTotalUsers();
     }
 }

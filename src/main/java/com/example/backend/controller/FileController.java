@@ -28,13 +28,5 @@ public class FileController {
         }
     }
 
-    @GetMapping("/stats")
-    public ResponseEntity<Map<String, Object>> getStats() {
-        Map<String, Object> stats = new HashMap<>();
-        stats.put("totalFiles", fileService.getTotalFiles());
-        stats.put("todayUploads", fileService.getTodayUploads());
-        stats.put("totalUsers", 42); // 模拟数据
-        stats.put("status", "正常");
-        return new ResponseEntity<>(stats, HttpStatus.OK);
-    }
+
 }

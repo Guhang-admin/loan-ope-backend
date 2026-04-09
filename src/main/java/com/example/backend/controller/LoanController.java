@@ -36,4 +36,22 @@ public class LoanController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
     }
+
+    @PutMapping("/{id}/approve")
+    public ResponseEntity<Void> approveLoan(@PathVariable Long id) {
+        loanService.approveLoan(id);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @PutMapping("/{id}/reject")
+    public ResponseEntity<Void> rejectLoan(@PathVariable Long id) {
+        loanService.rejectLoan(id);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<Loan>> getLoansByUserId(@PathVariable Long userId) {
+        List<Loan> loans = loanService.getLoansByUserId(userId);
+        return new ResponseEntity<>(loans, HttpStatus.OK);
+    }
 }

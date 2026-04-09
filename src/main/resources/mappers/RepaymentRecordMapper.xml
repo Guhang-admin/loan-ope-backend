@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.backend.mapper.RepaymentRecordMapper">
+    <resultMap id="RepaymentRecordMap" type="com.example.backend.entity.RepaymentRecord">
+        <id column="id" property="id" />
+        <result column="loan_id" property="loanId" />
+        <result column="plan_id" property="planId" />
+        <result column="payment_date" property="paymentDate" />
+        <result column="amount" property="amount" />
+        <result column="payment_method" property="paymentMethod" />
+    </resultMap>
+
+    <insert id="insertRepaymentRecord" parameterType="com.example.backend.entity.RepaymentRecord" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO repayment_record (loan_id, plan_id, payment_date, amount, payment_method)
+        VALUES (#{loanId}, #{planId}, #{paymentDate}, #{amount}, #{paymentMethod})
+    </insert>
+
+    <select id="getRecordsByLoanId" parameterType="Long" resultMap="RepaymentRecordMap">
+        SELECT * FROM repayment_record WHERE loan_id = #{loanId}
+    </select>
+</mapper>

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.backend.mapper.LoanMapper">
+    <resultMap id="LoanMap" type="com.example.backend.entity.Loan">
+        <id column="id" property="id" />
+        <result column="user_id" property="userId" />
+        <result column="loan_amount" property="loanAmount" />
+        <result column="interest_rate" property="interestRate" />
+        <result column="loan_term" property="loanTerm" />
+        <result column="loan_date" property="loanDate" />
+        <result column="status" property="status" />
+    </resultMap>
+
+    <insert id="insertLoan" parameterType="com.example.backend.entity.Loan" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO loan (user_id, loan_amount, interest_rate, loan_term, loan_date, status)
+        VALUES (#{userId}, #{loanAmount}, #{interestRate}, #{loanTerm}, #{loanDate}, #{status})
+    </insert>
+
+    <select id="getAllLoans" resultMap="LoanMap">
+        SELECT * FROM loan
+    </select>
+
+    <select id="getLoanById" parameterType="Long" resultMap="LoanMap">
+        SELECT * FROM loan WHERE id = #{id}
+    </select>
+
+    <update id="updateLoanStatus" parameterType="map">
+        UPDATE loan SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <select id="getLoansByUserId" parameterType="Long" resultMap="LoanMap">
+        SELECT * FROM loan WHERE user_id = #{userId}
+    </select>
+</mapper>

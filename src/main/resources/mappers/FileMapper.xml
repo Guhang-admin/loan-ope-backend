@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.backend.mapper.FileMapper">
+    <select id="getTotalFiles" resultType="int">
+        SELECT COUNT(*) FROM file
+    </select>
+    
+    <select id="getTodayUploads" resultType="int">
+        SELECT COUNT(*) FROM file WHERE DATE(upload_time) = CURDATE()
+    </select>
+    
+    <insert id="insertFile" parameterType="com.example.backend.entity.File">
+        INSERT INTO file (file_name, file_size, file_type, uploader, upload_time)
+        VALUES (#{fileName}, #{fileSize}, #{fileType}, #{uploader}, #{uploadTime})
+    </insert>
+</mapper>
