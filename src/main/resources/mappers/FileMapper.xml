@@ -10,7 +10,7 @@
     </select>
     
     <insert id="insertFile" parameterType="com.example.backend.entity.File">
-        INSERT INTO file (file_name, file_size, file_type, uploader, upload_time)
-        VALUES (#{fileName}, #{fileSize}, #{fileType}, #{uploader}, #{uploadTime})
+        INSERT INTO file (file_name, file_path, file_size, file_type, uploader, upload_time)
+        VALUES (#{fileName}, #{filePath}, #{fileSize}, #{fileType}, #{uploader}, #{uploadTime})
     </insert>
 </mapper>
