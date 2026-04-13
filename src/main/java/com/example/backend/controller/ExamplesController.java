@@ -4,6 +4,7 @@ import com.example.backend.examples.concurrency.ConcurrencyExample;
 import com.example.backend.examples.dataconsistency.TransactionExample;
 import com.example.backend.examples.memoryleak.MemoryLeakExample;
 import com.example.backend.examples.timeout.ConnectionLeakExample;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +21,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RequestMapping("/api/examples")
 public class ExamplesController {
     
+    @Autowired
+    private ConnectionLeakExample connectionLeakExample;
+    
     // 用于演示连接池问题的计数器
     private AtomicInteger connectionCount = new AtomicInteger(0);
     
@@ -34,8 +38,14 @@ public class ExamplesController {
      */
     @GetMapping("/timeout/leak")
     public Map<String, Object> simulateConnectionLeak() {
-        // 模拟连接泄漏
+        // 实际调用ConnectionLeakExample中的getUserById方法，模拟连接泄漏
         int count = connectionCount.incrementAndGet();
+        try {
+            // 调用有问题的方法，导致连接泄漏
+            connectionLeakExample.getUserById(1L);
+        } catch (Exception e) {
+            // 忽略异常，重点演示连接泄漏
+        }
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("message", "模拟连接泄漏");
@@ -46,7 +56,13 @@ public class ExamplesController {
     
     @GetMapping("/timeout/fixed")
     public Map<String, Object> fixedConnectionLeak() {
-        // 模拟正确的连接管理
+        // 实际调用ConnectionLeakExample中的getUserByIdFixed方法，正确关闭连接
+        try {
+            // 调用修复后的方法，正确关闭连接
+            connectionLeakExample.getUserByIdFixed(1L);
+        } catch (Exception e) {
+            // 忽略异常，重点演示连接关闭
+        }
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("message", "连接正确关闭");
