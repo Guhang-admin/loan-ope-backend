@@ -71,6 +71,73 @@ public class ExamplesController {
         return response;
     }
     
+    // 用于演示数据不一致的账户余额
+    private Map<Long, BigDecimal> accountBalances = new HashMap<>();
+    
+    /**
+     * 初始化账户余额
+     */
+    @PostMapping("/dataconsistency/reset")
+    public Map<String, Object> resetAccounts() {
+        accountBalances.clear();
+        accountBalances.put(1001L, new BigDecimal(1000));
+        accountBalances.put(1002L, new BigDecimal(500));
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "账户余额已初始化");
+        response.put("accounts", accountBalances);
+        return response;
+    }
+    
+    /**
+     * 增加账户余额
+     */
+    @PostMapping("/dataconsistency/add-balance")
+    public Map<String, Object> addBalance(@RequestParam Long userId,
+                                        @RequestParam BigDecimal amount) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            // 初始化默认账户余额
+            if (accountBalances.isEmpty()) {
+                accountBalances.put(1001L, new BigDecimal(1000));
+                accountBalances.put(1002L, new BigDecimal(500));
+            }
+            
+            BigDecimal currentBalance = accountBalances.getOrDefault(userId, BigDecimal.ZERO);
+            BigDecimal newBalance = currentBalance.add(amount);
+            accountBalances.put(userId, newBalance);
+            
+            response.put("status", "success");
+            response.put("message", "余额增加成功");
+            response.put("userId", userId);
+            response.put("addedAmount", amount);
+            response.put("previousBalance", currentBalance);
+            response.put("currentBalance", newBalance);
+            response.put("currentBalances", accountBalances);
+        } catch (Exception e) {
+            response.put("status", "error");
+            response.put("message", "增加余额失败");
+            response.put("error", e.getMessage());
+        }
+        return response;
+    }
+    
+    /**
+     * 获取账户余额
+     */
+    @GetMapping("/dataconsistency/accounts")
+    public Map<String, Object> getAccounts() {
+        Map<String, Object> response = new HashMap<>();
+        // 初始化默认账户余额
+        if (accountBalances.isEmpty()) {
+            accountBalances.put(1001L, new BigDecimal(1000));
+            accountBalances.put(1002L, new BigDecimal(500));
+        }
+        response.put("status", "success");
+        response.put("accounts", accountBalances);
+        return response;
+    }
+    
     /**
      * 第2期：数据不一致 - 模拟事务问题
      */
@@ -80,11 +147,51 @@ public class ExamplesController {
                                               @RequestParam BigDecimal amount) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 初始化默认账户余额
+            if (accountBalances.isEmpty()) {
+                accountBalances.put(1001L, new BigDecimal(1000));
+                accountBalances.put(1002L, new BigDecimal(500));
+            }
+            
+            // 获取操作前的余额
+            BigDecimal fromBalanceBefore = accountBalances.getOrDefault(fromUserId, BigDecimal.ZERO);
+            BigDecimal toBalanceBefore = accountBalances.getOrDefault(toUserId, BigDecimal.ZERO);
+            
             // 模拟没有事务的转账
-            // 这里只是演示，实际项目中应该使用真实的事务管理
-            response.put("status", "success");
-            response.put("message", "转账操作执行（无事务）");
-            response.put("warning", "没有事务管理，可能导致数据不一致");
+            // 1. 扣减转出账户余额
+            if (fromBalanceBefore.compareTo(amount) >= 0) {
+                accountBalances.put(fromUserId, fromBalanceBefore.subtract(amount));
+                
+                // 2. 模拟异常：故意不更新转入账户余额
+                // 这里模拟异常情况，导致数据不一致
+                
+                // 3. 获取操作后的余额
+                BigDecimal fromBalanceAfter = accountBalances.get(fromUserId);
+                BigDecimal toBalanceAfter = toBalanceBefore; // 转入账户余额未更新
+                
+                response.put("status", "success");
+                response.put("message", "转账操作执行（无事务）");
+                response.put("warning", "没有事务管理，可能导致数据不一致");
+                
+                // 添加数据变更前后的信息
+                Map<String, Object> balanceChanges = new HashMap<>();
+                balanceChanges.put("fromUserId", fromUserId);
+                balanceChanges.put("toUserId", toUserId);
+                balanceChanges.put("amount", amount);
+                balanceChanges.put("fromBalanceBefore", fromBalanceBefore);
+                balanceChanges.put("fromBalanceAfter", fromBalanceAfter);
+                balanceChanges.put("toBalanceBefore", toBalanceBefore);
+                balanceChanges.put("toBalanceAfter", toBalanceAfter);
+                balanceChanges.put("inconsistent", true);
+                
+                response.put("balanceChanges", balanceChanges);
+                response.put("currentBalances", accountBalances);
+            } else {
+                response.put("status", "error");
+                response.put("message", "余额不足");
+                response.put("fromBalance", fromBalanceBefore);
+                response.put("requiredAmount", amount);
+            }
         } catch (Exception e) {
             response.put("status", "error");
             response.put("message", "转账失败");
@@ -100,14 +207,58 @@ public class ExamplesController {
                                            @RequestParam BigDecimal amount) {
         Map<String, Object> response = new HashMap<>();
         try {
+            // 初始化默认账户余额
+            if (accountBalances.isEmpty()) {
+                accountBalances.put(1001L, new BigDecimal(1000));
+                accountBalances.put(1002L, new BigDecimal(500));
+            }
+            
+            // 获取操作前的余额
+            BigDecimal fromBalanceBefore = accountBalances.getOrDefault(fromUserId, BigDecimal.ZERO);
+            BigDecimal toBalanceBefore = accountBalances.getOrDefault(toUserId, BigDecimal.ZERO);
+            
             // 模拟有事务的转账
-            response.put("status", "success");
-            response.put("message", "转账操作执行（有事务）");
-            response.put("info", "使用 @Transactional 确保事务性");
+            // 1. 检查余额是否充足
+            if (fromBalanceBefore.compareTo(amount) >= 0) {
+                // 2. 扣减转出账户余额
+                accountBalances.put(fromUserId, fromBalanceBefore.subtract(amount));
+                
+                // 3. 增加转入账户余额
+                accountBalances.put(toUserId, toBalanceBefore.add(amount));
+                
+                // 4. 获取操作后的余额
+                BigDecimal fromBalanceAfter = accountBalances.get(fromUserId);
+                BigDecimal toBalanceAfter = accountBalances.get(toUserId);
+                
+                response.put("status", "success");
+                response.put("message", "转账操作执行（有事务）");
+                response.put("info", "使用 @Transactional 确保事务性");
+                
+                // 添加数据变更前后的信息
+                Map<String, Object> balanceChanges = new HashMap<>();
+                balanceChanges.put("fromUserId", fromUserId);
+                balanceChanges.put("toUserId", toUserId);
+                balanceChanges.put("amount", amount);
+                balanceChanges.put("fromBalanceBefore", fromBalanceBefore);
+                balanceChanges.put("fromBalanceAfter", fromBalanceAfter);
+                balanceChanges.put("toBalanceBefore", toBalanceBefore);
+                balanceChanges.put("toBalanceAfter", toBalanceAfter);
+                balanceChanges.put("inconsistent", false);
+                
+                response.put("balanceChanges", balanceChanges);
+                response.put("currentBalances", accountBalances);
+            } else {
+                response.put("status", "error");
+                response.put("message", "余额不足");
+                response.put("fromBalance", fromBalanceBefore);
+                response.put("requiredAmount", amount);
+            }
         } catch (Exception e) {
+            // 事务会自动回滚，恢复账户余额
             response.put("status", "error");
             response.put("message", "转账失败（事务已回滚）");
             response.put("error", e.getMessage());
+            response.put("currentBalances", accountBalances);
         }
         return response;
     }
