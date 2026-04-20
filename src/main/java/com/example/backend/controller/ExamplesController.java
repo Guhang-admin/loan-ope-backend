@@ -267,23 +267,48 @@ public class ExamplesController {
      * 第3期：内存异常 - 模拟内存泄漏
      */
     @PostMapping("/memoryleak/add")
-    public Map<String, Object> addToLeakyCache(@RequestParam Long id,
-                                             @RequestParam String data) {
+    public Map<String, Object> addToLeakyCache(@RequestBody Map<String, Object> request) {
+        Long id = Long.valueOf(request.get("id").toString());
+        String data = request.get("data").toString();
+        
         // 模拟内存泄漏：向静态缓存添加数据
         leakyCache.put(id, data);
+        
+        // 获取内存使用信息
+        Runtime runtime = Runtime.getRuntime();
+        long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        long maxMemory = runtime.maxMemory();
+        double memoryUsagePercent = (double) usedMemory / maxMemory * 100;
+        
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("message", "数据添加到缓存");
         response.put("cacheSize", leakyCache.size());
+        response.put("memoryUsage", String.format("%.2f MB / %.2f MB (%.1f%%)", 
+            usedMemory / (1024.0 * 1024.0), 
+            maxMemory / (1024.0 * 1024.0), 
+            memoryUsagePercent));
+        response.put("objectCount", leakyCache.size());
         response.put("warning", "缓存没有清理机制，可能导致内存泄漏");
         return response;
     }
     
     @GetMapping("/memoryleak/status")
     public Map<String, Object> getCacheStatus() {
+        // 获取内存使用信息
+        Runtime runtime = Runtime.getRuntime();
+        long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        long maxMemory = runtime.maxMemory();
+        double memoryUsagePercent = (double) usedMemory / maxMemory * 100;
+        
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("cacheSize", leakyCache.size());
+        response.put("memoryUsage", String.format("%.2f MB / %.2f MB (%.1f%%)", 
+            usedMemory / (1024.0 * 1024.0), 
+            maxMemory / (1024.0 * 1024.0), 
+            memoryUsagePercent));
+        response.put("objectCount", leakyCache.size());
         response.put("info", "缓存大小持续增长，可能导致内存溢出");
         return response;
     }
@@ -291,11 +316,60 @@ public class ExamplesController {
     @PostMapping("/memoryleak/clear")
     public Map<String, Object> clearCache() {
         leakyCache.clear();
+        
+        // 触发垃圾回收
+        System.gc();
+        
+        // 获取内存使用信息
+        Runtime runtime = Runtime.getRuntime();
+        long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        long maxMemory = runtime.maxMemory();
+        double memoryUsagePercent = (double) usedMemory / maxMemory * 100;
+        
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("message", "缓存已清理");
         response.put("cacheSize", leakyCache.size());
+        response.put("memoryUsage", String.format("%.2f MB / %.2f MB (%.1f%%)", 
+            usedMemory / (1024.0 * 1024.0), 
+            maxMemory / (1024.0 * 1024.0), 
+            memoryUsagePercent));
+        response.put("objectCount", leakyCache.size());
         response.put("info", "定期清理缓存可以防止内存泄漏");
+        return response;
+    }
+    
+    @PostMapping("/memoryleak/add-multiple")
+    public Map<String, Object> addMultipleToCache(@RequestParam int count) {
+        // 批量添加数据到缓存，加速内存泄漏
+        for (int i = 0; i < count; i++) {
+            long id = System.currentTimeMillis() + i;
+            // 创建较大的数据
+            String data = "模拟内存泄漏数据" + i;
+            StringBuilder largeData = new StringBuilder();
+            for (int j = 0; j < 10000; j++) {
+                largeData.append(data);
+            }
+            leakyCache.put(id, largeData.toString());
+        }
+        
+        // 获取内存使用信息
+        Runtime runtime = Runtime.getRuntime();
+        long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        long maxMemory = runtime.maxMemory();
+        double memoryUsagePercent = (double) usedMemory / maxMemory * 100;
+        
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "批量数据添加到缓存");
+        response.put("cacheSize", leakyCache.size());
+        response.put("addedCount", count);
+        response.put("memoryUsage", String.format("%.2f MB / %.2f MB (%.1f%%)", 
+            usedMemory / (1024.0 * 1024.0), 
+            maxMemory / (1024.0 * 1024.0), 
+            memoryUsagePercent));
+        response.put("objectCount", leakyCache.size());
+        response.put("warning", "批量添加数据加速内存泄漏过程");
         return response;
     }
     
@@ -304,28 +378,83 @@ public class ExamplesController {
      */
     @PostMapping("/concurrency/order")
     public Map<String, Object> processOrder(@RequestParam int quantity) {
-        // 模拟竞态条件
-        int current = inventory.get();
+        // 模拟多个线程造成的竞态条件
         Map<String, Object> response = new HashMap<>();
         
-        if (current >= quantity) {
-            // 模拟处理时间
+        // 先获取当前库存
+        int initialInventory = inventory.get();
+        response.put("initialInventory", initialInventory);
+        
+        if (initialInventory < quantity * 2) {
+            response.put("status", "error");
+            response.put("message", "库存不足，需要至少" + (quantity * 2) + "个库存来模拟竞态条件");
+            response.put("inventory", initialInventory);
+            response.put("details", "当前库存为" + initialInventory + "，无法满足两个线程各处理" + quantity + "个订单的需求");
+            return response;
+        }
+        
+        // 创建两个线程模拟竞态条件
+        Thread thread1 = new Thread(() -> {
+            // 线程1：读取库存后sleep
+            int current = inventory.get();
+            System.out.println("Thread 1: 读取库存 = " + current);
             try {
+                // 模拟处理时间，让线程2有机会也读取到相同的库存
+                Thread.sleep(500);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+            }
+            // 非原子操作：基于读取的旧值进行扣减
+            // 这里模拟竞态条件：线程1使用的是它之前读取的current值，而不是最新的值
+            int newInventory = current - quantity;
+            inventory.set(newInventory);
+            System.out.println("Thread 1: 扣减后库存 = " + newInventory);
+        });
+        
+        Thread thread2 = new Thread(() -> {
+            // 线程2：直接处理，不sleep
+            try {
+                // 稍等一下，确保线程1先读取库存
                 Thread.sleep(100);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-            // 这里存在竞态条件
-            int newInventory = inventory.addAndGet(-quantity);
-            response.put("status", "success");
-            response.put("message", "订单处理完成");
-            response.put("inventory", newInventory);
-            response.put("warning", "存在竞态条件，可能导致库存错误");
-        } else {
-            response.put("status", "error");
-            response.put("message", "库存不足");
-            response.put("inventory", current);
+            int current = inventory.get();
+            System.out.println("Thread 2: 读取库存 = " + current);
+            // 非原子操作：基于读取的旧值进行扣减
+            // 这里模拟竞态条件：线程2使用的是它之前读取的current值，而不是最新的值
+            int newInventory = current - quantity;
+            inventory.set(newInventory);
+            System.out.println("Thread 2: 扣减后库存 = " + newInventory);
+        });
+        
+        // 启动线程
+        thread1.start();
+        thread2.start();
+        
+        // 等待线程完成
+        try {
+            thread1.join();
+            thread2.join();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
+        
+        // 计算最终库存
+        int finalInventory = inventory.get();
+        int expectedInventory = initialInventory - quantity * 2;
+        boolean hasRaceCondition = finalInventory != expectedInventory;
+        
+        response.put("status", "success");
+        response.put("message", "竞态条件模拟完成");
+        response.put("inventory", finalInventory);
+        response.put("expectedInventory", expectedInventory);
+        response.put("raceConditionOccurred", hasRaceCondition);
+        response.put("warning", hasRaceCondition ? "竞态条件已发生！库存计算错误" : "竞态条件未发生，库存计算正确");
+        response.put("details", "两个线程同时处理订单，线程1读取库存后sleep，线程2直接处理，可能导致两个线程都读取到相同的库存值");
+        response.put("example", "初始库存: " + initialInventory + "，两个线程各处理" + quantity + "个订单，预期库存: " + expectedInventory + "，实际库存: " + finalInventory);
+        response.put("explanation", hasRaceCondition ? "两个线程都读取到" + initialInventory + "，都扣减" + quantity + "，最终库存变成" + finalInventory + "，而不是预期的" + expectedInventory : "两个线程依次处理，库存计算正确");
+        
         return response;
     }
     
@@ -340,6 +469,7 @@ public class ExamplesController {
                 response.put("status", "error");
                 response.put("message", "库存不足");
                 response.put("inventory", current);
+                response.put("details", "当前库存为" + current + "，无法满足订单数量" + quantity);
                 return response;
             }
             if (inventory.compareAndSet(current, current - quantity)) {
@@ -347,6 +477,8 @@ public class ExamplesController {
                 response.put("message", "订单处理完成（原子操作）");
                 response.put("inventory", current - quantity);
                 response.put("info", "使用 CAS 操作避免竞态条件");
+                response.put("details", "使用 compareAndSet 方法确保原子性，避免竞态条件");
+                response.put("example", "即使多个线程同时处理订单，CAS 操作也能保证库存计算正确");
                 return response;
             }
             // 竞争失败，重试
@@ -358,6 +490,7 @@ public class ExamplesController {
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
         response.put("inventory", inventory.get());
+        response.put("details", "当前库存状态，可用于检查并发操作后的结果");
         return response;
     }
     
@@ -368,6 +501,68 @@ public class ExamplesController {
         response.put("status", "success");
         response.put("message", "库存已重置");
         response.put("inventory", inventory.get());
+        response.put("details", "库存已重置为100，可用于重新测试并发操作");
+        return response;
+    }
+    
+    /**
+     * 模拟死锁
+     */
+    @PostMapping("/concurrency/deadlock")
+    public Map<String, Object> simulateDeadlock() {
+        Map<String, Object> response = new HashMap<>();
+        
+        // 模拟死锁场景
+        final Object lock1 = new Object();
+        final Object lock2 = new Object();
+        
+        Thread thread1 = new Thread(() -> {
+            synchronized (lock1) {
+                System.out.println("Thread 1: 获得 lock1");
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                System.out.println("Thread 1: 尝试获得 lock2");
+                synchronized (lock2) {
+                    System.out.println("Thread 1: 获得 lock2");
+                }
+            }
+        });
+        
+        Thread thread2 = new Thread(() -> {
+            synchronized (lock2) {
+                System.out.println("Thread 2: 获得 lock2");
+                try {
+                    Thread.sleep(100);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                System.out.println("Thread 2: 尝试获得 lock1");
+                synchronized (lock1) {
+                    System.out.println("Thread 2: 获得 lock1");
+                }
+            }
+        });
+        
+        thread1.start();
+        thread2.start();
+        
+        try {
+            // 等待线程执行一段时间
+            Thread.sleep(300);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        
+        response.put("status", "warning");
+        response.put("message", "死锁模拟完成");
+        response.put("details", "两个线程互相等待对方持有的锁，导致死锁");
+        response.put("example", "Thread 1 持有 lock1 等待 lock2，Thread 2 持有 lock2 等待 lock1");
+        response.put("threads", "线程1状态: " + thread1.getState() + ", 线程2状态: " + thread2.getState());
+        response.put("solution", "按固定顺序获取锁，避免嵌套锁，使用 tryLock 超时机制");
+        
         return response;
     }
 }
