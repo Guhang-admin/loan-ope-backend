@@ -6,6 +6,8 @@ import com.example.backend.examples.memoryleak.MemoryLeakExample;
 import com.example.backend.examples.timeout.ConnectionLeakExample;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -20,6 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 @RestController
 @RequestMapping("/api/examples")
 public class ExamplesController {
+    private static final Logger logger = LoggerFactory.getLogger(ExamplesController.class);
     
     @Autowired
     private ConnectionLeakExample connectionLeakExample;
@@ -40,34 +43,74 @@ public class ExamplesController {
     public Map<String, Object> simulateConnectionLeak() {
         // 实际调用ConnectionLeakExample中的getUserById方法，模拟连接泄漏
         int count = connectionCount.incrementAndGet();
+        Map<String, Object> response = new HashMap<>();
         try {
             // 调用有问题的方法，导致连接泄漏
-            connectionLeakExample.getUserById(1L);
+            ConnectionLeakExample.User user = connectionLeakExample.getUserById(1L);
+            response.put("status", "success");
+            response.put("message", "模拟连接泄漏");
+            response.put("connectionCount", count);
+            response.put("warning", "连接未关闭，可能导致连接池耗尽");
+            if (user != null) {
+                response.put("user", user);
+                response.put("info", "成功查询到用户数据，连接泄漏正在发生");
+            } else {
+                response.put("info", "未查询到用户数据，但连接泄漏仍在发生");
+            }
+            logger.info("模拟连接泄漏，当前连接计数: {}", count);
         } catch (Exception e) {
-            // 忽略异常，重点演示连接泄漏
+            response.put("status", "error");
+            response.put("message", "操作失败");
+            response.put("error", e.getMessage());
+            response.put("connectionCount", count);
+            response.put("warning", "连接可能未关闭，可能导致连接池耗尽");
+            logger.error("模拟连接泄漏时发生错误: {}", e.getMessage(), e);
         }
-        Map<String, Object> response = new HashMap<>();
-        response.put("status", "success");
-        response.put("message", "模拟连接泄漏");
-        response.put("connectionCount", count);
-        response.put("warning", "连接未关闭，可能导致连接池耗尽");
         return response;
     }
     
     @GetMapping("/timeout/fixed")
     public Map<String, Object> fixedConnectionLeak() {
         // 实际调用ConnectionLeakExample中的getUserByIdFixed方法，正确关闭连接
+        Map<String, Object> response = new HashMap<>();
         try {
             // 调用修复后的方法，正确关闭连接
-            connectionLeakExample.getUserByIdFixed(1L);
+            ConnectionLeakExample.User user = connectionLeakExample.getUserByIdFixed(1L);
+            response.put("status", "success");
+            response.put("message", "连接正确关闭");
+            response.put("connectionCount", connectionCount.get());
+            response.put("info", "使用 try-with-resources 自动关闭连接");
+            if (user != null) {
+                response.put("user", user);
+                response.put("details", "成功查询到用户数据，连接已正确关闭");
+            } else {
+                response.put("details", "未查询到用户数据，但连接已正确关闭");
+            }
+            logger.info("正确关闭连接，当前连接计数: {}", connectionCount.get());
         } catch (Exception e) {
-            // 忽略异常，重点演示连接关闭
+            response.put("status", "error");
+            response.put("message", "操作失败");
+            response.put("error", e.getMessage());
+            response.put("connectionCount", connectionCount.get());
+            response.put("info", "即使发生异常，连接也已正确关闭");
+            logger.error("正确关闭连接时发生错误: {}", e.getMessage(), e);
         }
+        return response;
+    }
+    
+    /**
+     * 重置连接计数，模拟连接池恢复
+     */
+    @PostMapping("/timeout/reset")
+    public Map<String, Object> resetConnectionCount() {
+        // 重置连接计数
+        connectionCount.set(0);
         Map<String, Object> response = new HashMap<>();
         response.put("status", "success");
-        response.put("message", "连接正确关闭");
+        response.put("message", "连接池恢复完成");
         response.put("connectionCount", connectionCount.get());
-        response.put("info", "使用 try-with-resources 自动关闭连接");
+        response.put("info", "连接计数已重置，模拟连接池恢复正常");
+        logger.info("连接池恢复，连接计数已重置为: {}", connectionCount.get());
         return response;
     }
     

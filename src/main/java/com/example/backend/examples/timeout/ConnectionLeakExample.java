@@ -30,16 +30,17 @@ public class ConnectionLeakExample {
         ResultSet rs = null;
         try {
             conn = dataSource.getConnection();
-            String sql = "SELECT * FROM user WHERE id = ?";
+            String sql = "SELECT id, username, name, role, credit_score FROM user WHERE id = ?";
             stmt = conn.prepareStatement(sql);
             stmt.setLong(1, id);
             rs = stmt.executeQuery();
             if (rs.next()) {
                 User user = new User();
                 user.setId(rs.getLong("id"));
+                user.setUsername(rs.getString("username"));
                 user.setName(rs.getString("name"));
-                user.setEmail(rs.getString("email"));
-                user.setPhone(rs.getString("phone"));
+                user.setRole(rs.getString("role"));
+                user.setCreditScore(rs.getInt("credit_score"));
                 return user;
             }
         } catch (SQLException e) {
@@ -54,15 +55,16 @@ public class ConnectionLeakExample {
      */
     public User getUserByIdFixed(Long id) {
         try (Connection conn = dataSource.getConnection();
-             PreparedStatement stmt = conn.prepareStatement("SELECT * FROM user WHERE id = ?");) {
+             PreparedStatement stmt = conn.prepareStatement("SELECT id, username, name, role, credit_score FROM user WHERE id = ?");) {
             stmt.setLong(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     User user = new User();
                     user.setId(rs.getLong("id"));
+                    user.setUsername(rs.getString("username"));
                     user.setName(rs.getString("name"));
-                    user.setEmail(rs.getString("email"));
-                    user.setPhone(rs.getString("phone"));
+                    user.setRole(rs.getString("role"));
+                    user.setCreditScore(rs.getInt("credit_score"));
                     return user;
                 }
             }
@@ -74,17 +76,20 @@ public class ConnectionLeakExample {
     
     public static class User {
         private Long id;
+        private String username;
         private String name;
-        private String email;
-        private String phone;
+        private String role;
+        private int creditScore;
         
         public Long getId() { return id; }
         public void setId(Long id) { this.id = id; }
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
-        public String getEmail() { return email; }
-        public void setEmail(String email) { this.email = email; }
-        public String getPhone() { return phone; }
-        public void setPhone(String phone) { this.phone = phone; }
+        public String getRole() { return role; }
+        public void setRole(String role) { this.role = role; }
+        public int getCreditScore() { return creditScore; }
+        public void setCreditScore(int creditScore) { this.creditScore = creditScore; }
     }
 }
