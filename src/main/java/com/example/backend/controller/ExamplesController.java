@@ -2,6 +2,8 @@ package com.example.backend.controller;
 
 import com.example.backend.examples.concurrency.ConcurrencyExample;
 import com.example.backend.examples.dataconsistency.TransactionExample;
+import com.example.backend.examples.distributedtransaction.DistributedTransactionExample;
+import com.example.backend.examples.cacheconsistency.CacheConsistencyExample;
 import com.example.backend.examples.memoryleak.MemoryLeakExample;
 import com.example.backend.examples.timeout.ConnectionLeakExample;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,12 @@ public class ExamplesController {
     
     @Autowired
     private ConnectionLeakExample connectionLeakExample;
+    
+    @Autowired
+    private DistributedTransactionExample distributedTransactionExample;
+    
+    @Autowired
+    private CacheConsistencyExample cacheConsistencyExample;
     
     // 用于演示连接池问题的计数器
     private AtomicInteger connectionCount = new AtomicInteger(0);
@@ -606,6 +614,124 @@ public class ExamplesController {
         response.put("threads", "线程1状态: " + thread1.getState() + ", 线程2状态: " + thread2.getState());
         response.put("solution", "按固定顺序获取锁，避免嵌套锁，使用 tryLock 超时机制");
         
+        return response;
+    }
+    
+    /**
+     * 高级案例：分布式事务问题
+     */
+    @PostMapping("/distributed-transaction/two-phase-commit")
+    public DistributedTransactionExample.DistributedTransactionResult simulateTwoPhaseCommit(
+            @RequestParam Long fromAccountId,
+            @RequestParam Long toAccountId,
+            @RequestParam BigDecimal amount) {
+        return distributedTransactionExample.simulateTwoPhaseCommitFailure(fromAccountId, toAccountId, amount);
+    }
+    
+    @PostMapping("/distributed-transaction/tcc")
+    public DistributedTransactionExample.DistributedTransactionResult simulateTCCPattern(
+            @RequestParam Long fromAccountId,
+            @RequestParam Long toAccountId,
+            @RequestParam BigDecimal amount) {
+        return distributedTransactionExample.simulateTCCPattern(fromAccountId, toAccountId, amount);
+    }
+    
+    @PostMapping("/distributed-transaction/saga")
+    public DistributedTransactionExample.DistributedTransactionResult simulateSagaPattern(
+            @RequestParam Long fromAccountId,
+            @RequestParam Long toAccountId,
+            @RequestParam BigDecimal amount) {
+        return distributedTransactionExample.simulateSagaPattern(fromAccountId, toAccountId, amount);
+    }
+    
+    @PostMapping("/distributed-transaction/reset")
+    public Map<String, Object> resetDistributedTransaction() {
+        distributedTransactionExample.resetAll();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "分布式事务数据已重置");
+        response.put("info", "所有账户和交易记录已恢复到初始状态");
+        return response;
+    }
+    
+    @GetMapping("/distributed-transaction/accounts")
+    public Map<String, Object> getDistributedTransactionAccounts() {
+        Map<Long, DistributedTransactionExample.Account> accounts = new HashMap<>();
+        for (long i = 1; i <= 3; i++) {
+            DistributedTransactionExample.Account account = distributedTransactionExample.getAccount(i);
+            if (account != null) {
+                accounts.put(i, account);
+            }
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("accounts", accounts);
+        return response;
+    }
+    
+    /**
+     * 高级案例：缓存一致性问题
+     */
+    @GetMapping("/cache-consistency/penetration")
+    public CacheConsistencyExample.CacheResult simulateCachePenetration(@RequestParam Long productId) {
+        return cacheConsistencyExample.simulateCachePenetration(productId);
+    }
+    
+    @GetMapping("/cache-consistency/breakdown")
+    public CacheConsistencyExample.CacheResult simulateCacheBreakdown(@RequestParam Long productId) {
+        return cacheConsistencyExample.simulateCacheBreakdown(productId);
+    }
+    
+    @GetMapping("/cache-consistency/avalanche")
+    public CacheConsistencyExample.CacheResult simulateCacheAvalanche() {
+        return cacheConsistencyExample.simulateCacheAvalanche();
+    }
+    
+    @PostMapping("/cache-consistency/consistency")
+    public CacheConsistencyExample.CacheResult simulateCacheConsistency(
+            @RequestParam Long productId,
+            @RequestParam BigDecimal newPrice) {
+        return cacheConsistencyExample.simulateCacheConsistency(productId, newPrice);
+    }
+    
+    @GetMapping("/cache-consistency/fix-penetration")
+    public CacheConsistencyExample.CacheResult fixCachePenetration(@RequestParam Long productId) {
+        return cacheConsistencyExample.fixCachePenetration(productId);
+    }
+    
+    @GetMapping("/cache-consistency/fix-breakdown")
+    public CacheConsistencyExample.CacheResult fixCacheBreakdown(@RequestParam Long productId) {
+        return cacheConsistencyExample.fixCacheBreakdown(productId);
+    }
+    
+    @PostMapping("/cache-consistency/fix-consistency")
+    public CacheConsistencyExample.CacheResult fixCacheConsistency(
+            @RequestParam Long productId,
+            @RequestParam BigDecimal newPrice) {
+        return cacheConsistencyExample.fixCacheConsistency(productId, newPrice);
+    }
+    
+    @PostMapping("/cache-consistency/reset")
+    public Map<String, Object> resetCacheConsistency() {
+        cacheConsistencyExample.resetAll();
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("message", "缓存一致性数据已重置");
+        response.put("info", "所有商品和缓存已恢复到初始状态");
+        return response;
+    }
+    
+    @GetMapping("/cache-consistency/products")
+    public Map<String, Object> getCacheConsistencyProducts() {
+        Map<Long, CacheConsistencyExample.Product> products = new HashMap<>();
+        for (long i = 1; i <= 3; i++) {
+            // 这里简化处理，实际应该从缓存一致性示例中获取
+            CacheConsistencyExample.Product product = new CacheConsistencyExample.Product(i, "商品" + i, new BigDecimal(100 + (int)i * 100), 100 - (int)i * 20);
+            products.put(i, product);
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", "success");
+        response.put("products", products);
         return response;
     }
 }
